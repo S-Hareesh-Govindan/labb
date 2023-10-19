@@ -1,0 +1,161 @@
+//Led interfacing
+#include  <lpc214x.h>
+void delay_ms(unsigned int count)
+{
+	unsigned int j=0,i=0;
+	for(j=0;j<count;j++)
+	{
+		for(i=0;i<3000;i++);
+	}
+}
+
+int main(void)
+{
+	PINSEL2=0x00000000;			//Configure P1 Pins as GPIO pin
+	IODIR1 =0xffffffff;			//Configure p1.16 as OUTPUT
+	while(1)
+	{
+		IOSET1 = 0xffffffff;	//Make all the Port pins as high
+		delay_ms(1000);			//wait for a while
+		IOCLR1 = 0xffffffff;	//Make all the Port pins as low
+		delay_ms(1000);			//wait for a while
+	}
+}
+//Timer 0
+#include<lpc21xx.h>
+void delay(void)
+{
+	T0TCR=(1<<1);              //Reset Timer0
+	T0MR0=499999;             //Loading match register value
+   	T0PR=10;                      //Loading Prescalar register value
+   	T0PC=T0TC=0;                  
+   	T0MCR=(1<<0)|(1<<2);  //Generates interrupt and reset on match
+   	T0TCR=(1<<0);             //Starting Timer
+   	while(!(T0IR&(1<<0)));  //Waiting for interrupt
+   	T0IR=(1<<0);               //Clearing interrupt
+}
+
+int main(void)
+{
+	PINSEL2=0x00000000;			
+	IODIR1 =0xFFFFFFFF;			
+	while(1)
+	{
+		IOSET1 = 0xFFFFFFFF;	
+		delay();			
+		IOCLR1 = 0xFFFFFFFF;	
+		delay();			
+	}
+}
+
+//Timer 0 switch
+#include <lpc214x.h>
+void delay_1(void);
+void delay_2(void);
+
+int main(void)
+{
+	PINSEL0 = 0x00000000;    // PINSEL0 for GPIO operation	
+	IODIR0 = 0xFFFFE7FF; 	 // Set IODIR0 as output
+	IODIR1 = 0xFFFFFFFF; 	 // Set IODIR1 as output	
+	while(1)
+	{
+	 	IOSET1 = 0xFFFFFFFF; 	//turn on all LEDs
+	 	delay_1();
+	 	IOCLR1 = 0xFFFFFFFF;	//turn off all LEDs
+	 	delay_1();
+	 	while (IO0PIN & (1<<12))  // Check if pin P0.12 is high
+	 	{
+			IOSET1 = 0xFFFFFFFF;  //turn on all LEDs
+			delay_2();
+   			IOCLR1 = 0xFFFFFFFF;  //turn off all LEDs
+	 		delay_2();
+	 	}
+	}
+}
+
+void delay_1(void)
+{
+	T0TCR = (1<<1); // Reset Timer0
+	T0MR0 = 599999*5; //Loading match register value
+	T0PR = 10; //Loading Prescalar register value
+	T0PC = T0TC = 0;
+	T0MCR = (1<<0) | (1<<2); //Generates interrupt and reset on match
+	T0TCR = (1<<0); // Start Timer0	
+	while (!(T0IR & (1<<0)));//Waiting for interrupt
+	T0IR = (1<<0); // Clear the interrupt flag
+}
+
+void delay_2(void)
+{
+	T0TCR = (1<<1); // Reset Timer0
+	T0MR0 = 599999; //Loading match register value
+	T0PR = 10; //Loading Prescalar register value
+	T0PC = T0TC = 0; 
+	T0MCR = (1<<0) | (1<<2);//Generates interrupt and reset on match
+	T0TCR = (1<<0); // Start Timer0
+	while (!(T0IR & (1<<0)));//Waiting for interrupt
+	T0IR = (1<<0);// Clear the interrupt flag
+}
+//Square wave
+#include <lpc214x.h>
+void delay()
+{
+	int i;
+	for(i=0;i<30000;i++);
+}
+int main(void)
+{
+	PINSEL1 = 0x00080000; /*P0.25 as DAC output */
+	IODIR0=0x00080000;
+	while(1)
+	{
+		DACR = (0x3FF<<6);
+		delay();
+		DACR = (0x000<<6);
+		delay();
+	}
+}
+//Sawtooth
+#include <lpc214x.h>
+int i,j:
+int main (void)
+{
+	PINSEL1 = 0x00080000; /*P0.25 as DAC output */
+	IODIR0 = 0x00080000;
+	for(i=0;i<30000;i++);
+	while(1)
+	{
+		for(j=0x00;j<0x3FF;j++)
+		{
+			DACR = (j<<6);
+		}
+	}
+}
+//ADC
+#include<lpc214x.h>
+void ADC_Init(void); 
+unsigned int i, ADC_Data;
+int main(void)
+{
+	PINSEL2=0x00000000; //Configures port 2 as GPIO 
+	IODIR1=0XFFFFFFFF;	//Set all pins of port 1 as output.
+	ADC_Init();
+	while (1)
+	{
+		AD0CR=0x00200700; //Configures ADC0 for operation
+		AD0CR |=0X00000008;//Starts the ADC conversion
+		AD0CR |=(1<<24);  //Starts the conversion by setting the PDN bit
+		while (!(AD0GDR & 0x80000000));//Waits for the conversion to complete
+		ADC_Data = (AD0GDR>>6) & 0x3FF; //Extracts the converted data & store
+		IOPIN1=ADC_Data<<16;  //Outputs the ADC result to the LEDs on port 1
+		AD0CR&=0xF8FFFFFF; //Disables ADC 
+		for(i=0;i<10000;i++); //Delay
+	}
+}
+void ADC_Init()
+{
+	PINSEL1&=0XDFFFFFFF; //Clear bit 31 (AD0.0) and set bit 30 (AD0.0)
+	PINSEL1|=0x10000000; //Sets P0.28 as an ADC input
+	PCONP|= (unsigned long)(0x00000001)<<12; //Enables power(bit -12) to the ADC module
+}
